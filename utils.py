@@ -5,6 +5,7 @@ from sklearn.neural_network import MLPRegressor
 import itertools
 from scipy.optimize import linear_sum_assignment
 import gc
+import time
 
 
 
@@ -115,7 +116,7 @@ class Drone():
             self.charge -= (self.fly_discharge + self.msr_discharge)*self.dt
             self.charge = max(self.charge, 0)
             self.update_death()
-            self.c = 'm' #['r','g','b','m'][i]
+            self.c = 'y' #['r','g','b','m'][i]
             if i==N-1:
                 self.landed = False
                 self.c = 'y'
@@ -132,6 +133,7 @@ class Environment():
                  base_xy=(5000.0,1000), num_drones=5, drones_xy=None, drone_speed=13.88888,
                  car_xy=(0,50), car_speed=1.38888, car_steps=[10,3,1], 
                  fly_discharge=0.00055555, msr_discharge=2.77778e-05, charge_time=600):
+        self.i = 0
         self.dt = 6.
         self.grid_x = grid_x
         self.grid_x = grid_y
@@ -152,7 +154,6 @@ class Environment():
             drones_xy = 10*np.random.normal(0,1,(num_drones,2)) + self.base_xy
         self.drones = [Drone(d[None], self.base_xy) for d in drones_xy]        
         
-        self.i = 0
         self.sending = False
         
         self.meandist = []
@@ -164,7 +165,10 @@ class Environment():
         return [self.new_points, self.valid_mask, drones_xy, self.base_xy, death]
         
     def get_drone_points(self):
-        return 2*(self.points-self.car_xy) + self.car_xy
+        j = self.i % self.car_steps[-1]
+        xy = self.car_xy.copy()
+        xy[0,0] += max(self.car_steps[1]-j, 0)*self.car_speed*self.dt
+        return 2*(self.points - xy) + xy
     
     def recharge_drones(self):
         recharging = [d for d in self.drones if d.timeout > 0]
@@ -206,19 +210,16 @@ class Environment():
             
         self.i += 1
 
-        print([d.charge for d in self.drones])
-        print([d.returning for d in self.drones])
-        print([d.landed for d in self.drones])
-        print([d.timeout for d in self.drones])
-        print([d.target for d in self.drones])
-        print([d.xy for d in self.drones])
-        print ' '
+        # print([d.charge for d in self.drones])
+        # print([d.returning for d in self.drones])
+        # print([d.landed for d in self.drones])
+        # print([d.timeout for d in self.drones])
+        # print([d.target for d in self.drones])
+        # print([d.xy for d in self.drones])
+        # print ' '
         
     def visualize(self):
-        plt.clf()
-        plt.close()
-        gc.collect()
-        plt.figure(figsize=(15,10))
+        #plt.figure(figsize=(7,7))
         plt.scatter(self.points[:,0], self.points[:,1], marker='.')
         c = 'g' if self.sending else 'r'
         pnt = self.new_points
@@ -231,7 +232,13 @@ class Environment():
             plt.scatter([d.xy[0,0]], [d.xy[0,1]], color=d.c, marker='>', alpha=(d.charge+1.0)/2)
         plt.xlim(0,10000)
         plt.ylim(0,2000)
-        #plt.show()
+        plt.show(block=False)
+        plt.pause(0.01)
+        plt.clf()
+        #plt.close()
+        gc.collect()
+        
+        
         
         
         
